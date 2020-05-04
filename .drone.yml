@@ -1,0 +1,70 @@
+---
+kind: pipeline
+name: linux-amd64
+platform:
+  os: linux
+  arch: amd64
+
+steps:
+- name: build
+  image: briandowns/rancher-build-base:v0.1.0
+  volumes:
+  - name: docker
+    path: /var/run
+  commands:
+  - sleep 20
+  - make
+  when:
+    event:
+    - tag
+    - push
+
+- name: push
+  image: briandowns/rancher-build-base:v0.1.0
+  volumes:
+  - name: docker
+    path: /var/run
+  commands:
+  - docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
+  - make image-push
+  environment:
+    DOCKER_USERNAME:
+      from_secret: docker_username
+    DOCKER_PASSWORD:
+      from_secret: docker_password
+  when:
+    event:
+    - tag
+    - push
+
+- name: scan
+  image: briandowns/rancher-build-base:v0.1.0
+  volumes:
+  - name: docker
+    path: /var/run
+  commands:
+  - make image-scan
+  when:
+    event:
+    - tag
+
+- name: manifest
+  image: briandowns/rancher-build-base:v0.1.0
+  volumes:
+  - name: docker
+    path: /var/run
+  commands:
+  - make image-manifest
+  when:
+    event:
+    - tag
+    - push
+
+services:
+- name: docker
+  image: briandowns/rancher-build-base:v0.1.0
+  privileged: true
+
+volumes:
+  - name: docker
+	temp: {}
