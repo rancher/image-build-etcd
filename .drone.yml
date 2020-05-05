@@ -56,10 +56,10 @@ steps:
     event:
     - tag
 
-services:
-- name: docker
-  image: docker:dind
-  privileged: true
+# services:
+# - name: docker
+#   image: docker:dind
+#   privileged: true
 
 volumes:
 - name: docker
