@@ -7,7 +7,7 @@ platform:
 
 steps:
 - name: build
-  image: docker:dind
+  image: briandowns/rancher-build-base:v0.1.0
   volumes:
   - name: docker
     path: /var/run/docker.sockrun
@@ -58,7 +58,7 @@ steps:
 
 services:
 - name: docker
-  image: briandowns/rancher-build-base:v0.1.0
+  image: docker:dind
   privileged: true
 
 volumes:
