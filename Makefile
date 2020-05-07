@@ -10,7 +10,7 @@ image-push:
 
 .PHONY: scan
 image-scan:
-	trivy --severity $(SEVERITIES) --no-progress --ignore-unfixed ranchertest/etcd:$(TAG)
+	trivy --severity $(SEVERITIES) --no-progress --skip-update --ignore-unfixed ranchertest/etcd:$(TAG)
 
 .PHONY: image-manifest
 image-manifest:
