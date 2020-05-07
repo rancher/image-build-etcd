@@ -6,7 +6,7 @@ all:
 
 .PHONY: image-push
 image-push:
-	docker push ranchertest/etcd:$(TAG) >> /dev/null
+	docker push ranchertest/etcd:$(TAG)
 
 .PHONY: scan
 image-scan:
