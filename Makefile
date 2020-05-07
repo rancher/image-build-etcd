@@ -15,5 +15,5 @@ image-scan:
 .PHONY: image-manifest
 image-manifest:
 	docker image inspect ranchertest/etcd:$(TAG)
-	DOCKER_CLI_EXPERIMENTAL=enabled docker manifest create fips-image-build-flannel:$(TAG) \
-		$(shell docker image inspect ranchertest/etcd:$(TAG) | jq -r \'.[] | .RepoDigests[0]\')
+	DOCKER_CLI_EXPERIMENTAL=enabled docker manifest create ranchertest/etcd:$(TAG) \
+		$(shell docker image inspect ranchertest/etcd:$(TAG) | jq -r '.[] | .RepoDigests[0]')
