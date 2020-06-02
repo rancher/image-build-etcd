@@ -12,6 +12,7 @@ steps:
   - name: dockersock
     path: /var/run
   commands:
+  - sleep 20
   - TAG=${DRONE_TAG} make
   when:
     event:
