@@ -15,7 +15,6 @@ steps:
   - TAG=${DRONE_TAG} make
   when:
     event:
-    - push
     - tag
 
 - name: push
