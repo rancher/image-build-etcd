@@ -1,7 +1,7 @@
-# ranchertest/etcd
+# rancher/etcd
 
 ## Build
 
 ```sh
-TAG=v0.4.0 make
+TAG=v3.4.7 make
 ```

@@ -1,5 +1,5 @@
 ARG UBI_IMAGE=registry.access.redhat.com/ubi7/ubi-minimal:latest
-ARG GO_IMAGE=briandowns/rancher-build-base:v0.1.1
+ARG GO_IMAGE=rancher/build-base:v1.14.2
 
 FROM ${UBI_IMAGE} as ubi
 
@@ -12,11 +12,11 @@ RUN git clone --depth=1 https://github.com/etcd-io/etcd.git
 RUN cd /go/etcd                        && \
     git fetch --all --tags --prune     && \
     git checkout tags/${TAG} -b ${TAG} && \
-	make build
+    make build
 
 FROM ubi
 RUN microdnf update -y && \ 
-	rm -rf /var/cache/yum
+    rm -rf /var/cache/yum
 
 COPY --from=builder /go/etcd/bin/etcd /usr/local/bin
 COPY --from=builder /go/etcd/bin/etcdctl /usr/local/bin
