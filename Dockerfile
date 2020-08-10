@@ -12,6 +12,7 @@ RUN git clone --depth=1 https://github.com/etcd-io/etcd.git
 RUN cd /go/etcd                        && \
     git fetch --all --tags --prune     && \
     git checkout tags/${TAG} -b ${TAG} && \
+    go mod vendor && \
     make build
 
 FROM ubi
