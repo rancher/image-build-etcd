@@ -1,4 +1,4 @@
-# rancher/etcd
+# rancher/hardened-etcd
 
 ## Build
 
