@@ -4,21 +4,27 @@ ifeq ($(ARCH),)
 ARCH=$(shell go env GOARCH)
 endif
 
+BUILD_META=-build$(shell date +%Y%m%d)
 ORG ?= rancher
 PKG ?= go.etcd.io/etcd
 SRC ?= github.com/rancher/etcd
-TAG ?= v3.4.13-k3s1
+TAG ?= v3.4.13-k3s1$(BUILD_META)
 
 ifneq ($(DRONE_TAG),)
 TAG := $(DRONE_TAG)
 endif
 
+ifeq (,$(filter %$(BUILD_META),$(TAG)))
+$(error TAG needs to end with build metadata: $(BUILD_META))
+endif
+
 .PHONY: image-build
 image-build:
 	docker build \
+	  --pull \
 		--build-arg PKG=$(PKG) \
 		--build-arg SRC=$(SRC) \
-		--build-arg TAG=$(TAG) \
+		--build-arg TAG=$(TAG:$(BUILD_META)=) \
 		--tag $(ORG)/hardened-etcd:$(TAG) \
 		--tag $(ORG)/hardened-etcd:$(TAG)-$(ARCH) \
 	.
