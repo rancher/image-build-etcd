@@ -1,5 +1,5 @@
 ARG UBI_IMAGE=registry.access.redhat.com/ubi7/ubi-minimal:latest
-ARG GO_IMAGE=rancher/hardened-build-base:v1.16.7b7
+ARG GO_IMAGE=rancher/hardened-build-base:v1.16.9b7
 FROM ${UBI_IMAGE} as ubi
 FROM ${GO_IMAGE} as builder
 # setup required packages
@@ -15,6 +15,7 @@ RUN set -x \
 ARG PKG=go.etcd.io/etcd
 ARG SRC=github.com/k3s-io/etcd
 ARG TAG="v3.5.0-k3s2"
+ARG ARCH="amd64"
 RUN git clone --depth=1 https://${SRC}.git $GOPATH/src/${PKG}
 WORKDIR $GOPATH/src/${PKG}
 RUN git fetch --all --tags --prune
@@ -31,7 +32,9 @@ RUN go mod vendor \
     fi
 
 RUN go-assert-static.sh bin/*
-RUN go-assert-boring.sh bin/*
+RUN if [ "${ARCH}" != "s390x" ]; then \
+	go-assert-boring.sh bin/*; \
+    fi
 RUN install -s bin/* /usr/local/bin
 RUN etcd --version
 
