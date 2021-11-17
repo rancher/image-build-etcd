@@ -43,4 +43,6 @@ RUN etcd --version
 FROM ubi
 RUN microdnf update -y && \ 
     rm -rf /var/cache/yum
+ARG ETCD_UNSUPPORTED_ARCH
+ENV ETCD_UNSUPPORTED_ARCH=$ETCD_UNSUPPORTED_ARCH
 COPY --from=builder /usr/local/bin/ /usr/local/bin/
