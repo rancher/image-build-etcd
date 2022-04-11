@@ -1,10 +1,10 @@
-ARG UBI_IMAGE=registry.access.redhat.com/ubi7/ubi-minimal:latest
+ARG BCI_IMAGE=registry.suse.com/bci/bci-base:latest
 ARG GO_IMAGE=rancher/hardened-build-base:v1.16.10b7
-FROM ${UBI_IMAGE} as ubi
+FROM ${BCI_IMAGE} as bci
 FROM ${GO_IMAGE} as builder
 # setup required packages
-RUN set -x \
- && apk --no-cache add \
+RUN set -x && \
+    apk --no-cache add \
     file \
     gcc \
     git \
@@ -21,28 +21,28 @@ WORKDIR $GOPATH/src/${PKG}
 RUN git fetch --all --tags --prune
 RUN git checkout tags/${TAG} -b ${TAG}
 # build and assert statically linked executable(s)
-RUN go mod vendor \
- && export GO_LDFLAGS="-linkmode=external -X ${PKG}/version.GitSHA=$(git rev-parse --short HEAD)" \
- && if echo ${TAG} | grep -qE '^v3\.4\.'; then \
-    go-build-static.sh -gcflags=-trimpath=${GOPATH}/src -o bin/etcd . \
- && go-build-static.sh -gcflags=-trimpath=${GOPATH}/src -o bin/etcdctl ./etcdctl; \
+RUN go mod vendor && \
+    export GO_LDFLAGS="-linkmode=external -X ${PKG}/version.GitSHA=$(git rev-parse --short HEAD)" && \
+    if echo ${TAG} | grep -qE '^v3\.4\.'; then \
+    go-build-static.sh -gcflags=-trimpath=${GOPATH}/src -o bin/etcd . && \
+    go-build-static.sh -gcflags=-trimpath=${GOPATH}/src -o bin/etcdctl ./etcdctl; \
     else \
-    cd $GOPATH/src/${PKG}/server  && go-build-static.sh -gcflags=-trimpath=${GOPATH}/src -o ../bin/etcd . \
- && cd $GOPATH/src/${PKG}/etcdctl && go-build-static.sh -gcflags=-trimpath=${GOPATH}/src -o ../bin/etcdctl .; \
+    cd $GOPATH/src/${PKG}/server  && go-build-static.sh -gcflags=-trimpath=${GOPATH}/src -o ../bin/etcd . && \
+    cd $GOPATH/src/${PKG}/etcdctl && go-build-static.sh -gcflags=-trimpath=${GOPATH}/src -o ../bin/etcdctl .; \
     fi
 
 RUN go-assert-static.sh bin/*
 ARG ETCD_UNSUPPORTED_ARCH
 ENV ETCD_UNSUPPORTED_ARCH=$ETCD_UNSUPPORTED_ARCH
 RUN if [ "${ARCH}" != "s390x" ]; then \
-	go-assert-boring.sh bin/*; \
+    go-assert-boring.sh bin/*; \
     fi
 RUN install -s bin/* /usr/local/bin
 RUN etcd --version
 
-FROM ubi
-RUN microdnf update -y && \ 
-    rm -rf /var/cache/yum
+FROM bci
+RUN zypper update -y && \
+    zypper clean --all
 ARG ETCD_UNSUPPORTED_ARCH
 ENV ETCD_UNSUPPORTED_ARCH=$ETCD_UNSUPPORTED_ARCH
 COPY --from=builder /usr/local/bin/ /usr/local/bin/
