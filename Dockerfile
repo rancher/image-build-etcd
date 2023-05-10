@@ -34,7 +34,7 @@ RUN go mod vendor && \
 RUN go-assert-static.sh bin/*
 ARG ETCD_UNSUPPORTED_ARCH
 ENV ETCD_UNSUPPORTED_ARCH=$ETCD_UNSUPPORTED_ARCH
-RUN if [ "${ARCH}" != "s390x" ] || [ "${ARCH}" != "arm64" ]; then \
+RUN if [ "${ARCH}" = "amd64" ]; then \
 	    go-assert-boring.sh bin/*; \
     fi
 RUN install -s bin/* /usr/local/bin
