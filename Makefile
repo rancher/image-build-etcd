@@ -11,11 +11,11 @@ SRC ?= github.com/k3s-io/etcd
 TAG ?= v3.5.7-k3s1$(BUILD_META)
 
 ifneq ($(DRONE_TAG),)
-TAG := $(DRONE_TAG)
+	TAG := $(DRONE_TAG)
 endif
 
 ifeq (,$(filter %$(BUILD_META),$(TAG)))
-$(error TAG needs to end with build metadata: $(BUILD_META))
+	$(error TAG needs to end with build metadata: $(BUILD_META))
 endif
 
 .PHONY: image-build
