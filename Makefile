@@ -14,7 +14,7 @@ BUILD_META=-build$(shell date +%Y%m%d)
 ORG ?= rancher
 PKG ?= go.etcd.io/etcd
 SRC ?= github.com/k3s-io/etcd
-TAG ?= v3.5.7-k3s1$(BUILD_META)
+TAG ?= v3.5.9-k3s1$(BUILD_META)
 
 ifneq ($(DRONE_TAG),)
 	TAG := $(DRONE_TAG)
