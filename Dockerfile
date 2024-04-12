@@ -1,6 +1,4 @@
-ARG BCI_IMAGE=registry.suse.com/bci/bci-base
 ARG GO_IMAGE=rancher/hardened-build-base:v1.20.7b3
-FROM ${BCI_IMAGE} as bci
 FROM ${GO_IMAGE} as builder
 # setup required packages
 RUN set -x && \
@@ -40,7 +38,7 @@ RUN if [ "${ARCH}" = "amd64" ]; then \
 RUN install -s bin/* /usr/local/bin
 RUN etcd --version
 
-FROM bci
+FROM scratch
 ARG ETCD_UNSUPPORTED_ARCH
 ENV ETCD_UNSUPPORTED_ARCH=$ETCD_UNSUPPORTED_ARCH
 COPY --from=builder /usr/local/bin/ /usr/local/bin/
