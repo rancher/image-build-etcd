@@ -1,25 +1,36 @@
-ARG GO_IMAGE=rancher/hardened-build-base:v1.20.7b3
-FROM ${GO_IMAGE} as builder
+ARG GO_IMAGE=rancher/hardened-build-base:v1.20.13b2
+ARG ARCH="amd64"
+
+# Image that provides cross compilation tooling.
+FROM --platform=$BUILDPLATFORM rancher/mirrored-tonistiigi-xx:1.3.0 as xx
+
+FROM --platform=$BUILDPLATFORM ${GO_IMAGE} as base-builder
+# copy xx scripts to your build stage
+COPY --from=xx / /
+RUN apk add file make git clang lld
+ARG TARGETPLATFORM
 # setup required packages
 RUN set -x && \
-    apk --no-cache add \
-    file \
-    gcc \
-    git \
+    xx-info env &&\
+    xx-apk --no-cache add musl-dev gcc \
     libselinux-dev \
-    libseccomp-dev \
-    make
+    libseccomp-dev 
+
+FROM base-builder as etcd-builder
 # setup the build
 ARG PKG=go.etcd.io/etcd
 ARG SRC=github.com/k3s-io/etcd
 ARG TAG="v3.5.7-k3s1"
-ARG ARCH="amd64"
 RUN git clone --depth=1 https://${SRC}.git $GOPATH/src/${PKG}
 WORKDIR $GOPATH/src/${PKG}
 RUN git fetch --all --tags --prune
 RUN git checkout tags/${TAG} -b ${TAG}
+RUN go mod vendor
+RUN go mod download
+# cross-compilation setup
+ARG TARGETPLATFORM
 # build and assert statically linked executable(s)
-RUN go mod vendor && \
+RUN xx-go --wrap && \
     export GO_LDFLAGS="-linkmode=external -X ${PKG}/version.GitSHA=$(git rev-parse --short HEAD)" && \
     if echo ${TAG} | grep -qE '^v3\.4\.'; then \
         go-build-static.sh -gcflags=-trimpath=${GOPATH}/src -o bin/etcd . && \
@@ -29,16 +40,24 @@ RUN go mod vendor && \
         cd $GOPATH/src/${PKG}/etcdctl && go-build-static.sh -gcflags=-trimpath=${GOPATH}/src -o ../bin/etcdctl .; \
     fi
 
+RUN xx-verify --static bin/*
 RUN go-assert-static.sh bin/*
 ARG ETCD_UNSUPPORTED_ARCH
 ENV ETCD_UNSUPPORTED_ARCH=$ETCD_UNSUPPORTED_ARCH
 RUN if [ "${ARCH}" = "amd64" ]; then \
 	    go-assert-boring.sh bin/*; \
     fi
-RUN install -s bin/* /usr/local/bin
+RUN install bin/* /usr/local/bin
+
+FROM ${GO_IMAGE} as strip_binary
+#strip needs to run on TARGETPLATFORM, not BUILDPLATFORM
+COPY --from=etcd-builder /usr/local/bin/ /usr/local/bin
+RUN for bin in $(ls /usr/local/bin); do \
+        strip /usr/local/bin/${bin}; \
+    done
 RUN etcd --version
 
 FROM scratch
 ARG ETCD_UNSUPPORTED_ARCH
 ENV ETCD_UNSUPPORTED_ARCH=$ETCD_UNSUPPORTED_ARCH
-COPY --from=builder /usr/local/bin/ /usr/local/bin/
+COPY --from=strip_binary /usr/local/bin/ /usr/local/bin/
