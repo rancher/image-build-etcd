@@ -11,8 +11,8 @@ RUN set -x && \
     make
 # setup the build
 ARG PKG=go.etcd.io/etcd
-ARG SRC=github.com/k3s-io/etcd
-ARG TAG="v3.5.7-k3s1"
+ARG SRC=github.com/galal-hussein/etcd
+ARG TAG="v3.5.7-k3s2"
 ARG ARCH="amd64"
 RUN git clone --depth=1 https://${SRC}.git $GOPATH/src/${PKG}
 WORKDIR $GOPATH/src/${PKG}
