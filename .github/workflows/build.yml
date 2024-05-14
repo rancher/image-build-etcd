@@ -5,6 +5,8 @@ on:
   pull_request:
 
 name: Build
+permissions:
+    contents: read
 jobs:
   build-amd64:
     runs-on: ubuntu-latest
@@ -33,7 +35,6 @@ jobs:
         ignore-unfixed: true
         vuln-type: 'os,library'
         severity: 'CRITICAL,HIGH'
-        trivyignores: '.trivyignore'
 
   build-arm64:
     runs-on: ubuntu-latest
@@ -70,4 +71,3 @@ jobs:
         ignore-unfixed: true
         vuln-type: 'os,library'
         severity: 'CRITICAL,HIGH'
-        trivyignores: '.trivyignore'
