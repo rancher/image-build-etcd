@@ -1,0 +1,7 @@
+# Upstream CVEs
+# CVE-2023-47108 opentelemetry cve
+CVE-2023-47108
+# CVE-2023-39325 x/net cve
+CVE-2023-39325 
+# GHSA-m425-mq94-257g grpc cve
+GHSA-m425-mq94-257g
