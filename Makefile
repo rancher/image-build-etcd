@@ -14,7 +14,11 @@ BUILD_META=-build$(shell date +%Y%m%d)
 ORG ?= rancher
 PKG ?= go.etcd.io/etcd
 SRC ?= github.com/k3s-io/etcd
-TAG ?= v3.5.7-k3s1$(BUILD_META)
+TAG ?= ${GITHUB_ACTION_TAG}
+
+ifeq ($(TAG),)
+TAG := v3.5.7-k3s1$(BUILD_META)
+endif
 
 ifeq (,$(filter %$(BUILD_META),$(TAG)))
 $(error TAG needs to end with build metadata: $(BUILD_META))
@@ -46,7 +50,7 @@ image-scan:
 PHONY: log
 log:
 	@echo "ARCH=$(ARCH)"
-	@echo "TAG=$(TAG)"
+	@echo "TAG=$(TAG:$(BUILD_META)=)"
 	@echo "ORG=$(ORG)"
 	@echo "PKG=$(PKG)"
 	@echo "SRC=$(SRC)"
