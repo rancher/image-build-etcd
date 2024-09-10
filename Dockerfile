@@ -1,4 +1,4 @@
-ARG GO_IMAGE=rancher/hardened-build-base:v1.20.13b2
+ARG GO_IMAGE=rancher/hardened-build-base:v1.22.7b1
 ARG ARCH="amd64"
 
 # Image that provides cross compilation tooling.
@@ -20,7 +20,7 @@ FROM base-builder as etcd-builder
 # setup the build
 ARG PKG=go.etcd.io/etcd
 ARG SRC=github.com/k3s-io/etcd
-ARG TAG="v3.5.7-k3s1"
+ARG TAG="v3.5.13-k3s1"
 RUN git clone --depth=1 https://${SRC}.git $GOPATH/src/${PKG}
 WORKDIR $GOPATH/src/${PKG}
 RUN git fetch --all --tags --prune
