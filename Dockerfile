@@ -1,5 +1,4 @@
 ARG GO_IMAGE=rancher/hardened-build-base:v1.22.7b1
-ARG ARCH="amd64"
 
 # Image that provides cross compilation tooling.
 FROM --platform=$BUILDPLATFORM rancher/mirrored-tonistiigi-xx:1.3.0 as xx
@@ -18,6 +17,7 @@ RUN set -x && \
 
 FROM base-builder as etcd-builder
 # setup the build
+ARG TARGETARCH
 ARG PKG=go.etcd.io/etcd
 ARG SRC=github.com/k3s-io/etcd
 ARG TAG="v3.5.13-k3s1"
@@ -44,7 +44,7 @@ RUN xx-verify --static bin/*
 RUN go-assert-static.sh bin/*
 ARG ETCD_UNSUPPORTED_ARCH
 ENV ETCD_UNSUPPORTED_ARCH=$ETCD_UNSUPPORTED_ARCH
-RUN if [ "${ARCH}" = "amd64" ]; then \
+RUN if [ "${TARGETARCH}" = "amd64" ]; then \
 	    go-assert-boring.sh bin/*; \
     fi
 RUN install bin/* /usr/local/bin
