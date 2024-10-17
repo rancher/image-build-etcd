@@ -59,5 +59,7 @@ RUN etcd --version
 
 FROM scratch
 ARG ETCD_UNSUPPORTED_ARCH
+LABEL org.opencontainers.image.url="https://hub.docker.com/r/rancher/hardened-etcd"
+LABEL org.opencontainers.image.source="https://github.com/rancher/image-build-etcd.git"
 ENV ETCD_UNSUPPORTED_ARCH=$ETCD_UNSUPPORTED_ARCH
 COPY --from=strip_binary /usr/local/bin/ /usr/local/bin/
