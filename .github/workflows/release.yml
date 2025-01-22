@@ -32,6 +32,8 @@ jobs:
         image: hardened-etcd
         tag: ${{ github.event.release.tag_name }}
 
+        push-to-public: false
+
         prime-repo: rancher
         prime-registry: ${{ env.PRIME_REGISTRY }}
         prime-username: ${{ env.PRIME_REGISTRY_USERNAME }}
