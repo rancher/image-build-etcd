@@ -19,8 +19,8 @@ FROM base-builder as etcd-builder
 # setup the build
 ARG TARGETARCH
 ARG PKG=go.etcd.io/etcd
-ARG SRC=github.com/k3s-io/etcd
-ARG TAG="v3.5.13-k3s1"
+ARG SRC=github.com/rancher/etcd-exp
+ARG TAG="v3.5.13-k3s1-exp1"
 RUN git clone --depth=1 https://${SRC}.git $GOPATH/src/${PKG}
 WORKDIR $GOPATH/src/${PKG}
 RUN git fetch --all --tags --prune

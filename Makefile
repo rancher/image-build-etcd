@@ -13,7 +13,7 @@ endif
 
 BUILD_META=-build$(shell date +%Y%m%d)
 PKG ?= go.etcd.io/etcd
-SRC ?= github.com/k3s-io/etcd
+SRC ?= github.com/rancher/etcd-exp
 TAG ?= ${GITHUB_ACTION_TAG}
 
 ifeq ($(TAG),)
@@ -36,11 +36,7 @@ BUILD_OPTS = \
 
 .PHONY: image-build
 image-build:
-	docker buildx build \
-		$(BUILD_OPTS) \
-		--pull \
-		--load \
-	.
+	docker buildx build $(BUILD_OPTS) --pull --load .
 
 .PHONY: push-image
 push-image:
