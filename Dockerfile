@@ -1,9 +1,9 @@
 ARG GO_IMAGE=rancher/hardened-build-base:v1.23.10b1
 
 # Image that provides cross compilation tooling.
-FROM --platform=$BUILDPLATFORM rancher/mirrored-tonistiigi-xx:1.6.1 as xx
+FROM --platform=$BUILDPLATFORM rancher/mirrored-tonistiigi-xx:1.6.1 AS xx
 
-FROM --platform=$BUILDPLATFORM ${GO_IMAGE} as base-builder
+FROM --platform=$BUILDPLATFORM ${GO_IMAGE} AS base-builder
 # copy xx scripts to your build stage
 COPY --from=xx / /
 RUN apk add file make git clang lld
@@ -15,7 +15,7 @@ RUN set -x && \
     libselinux-dev \
     libseccomp-dev 
 
-FROM base-builder as etcd-builder
+FROM base-builder AS etcd-builder
 # setup the build
 ARG TARGETARCH
 ARG PKG=go.etcd.io/etcd
@@ -49,7 +49,7 @@ RUN if [ "${TARGETARCH}" = "amd64" ]; then \
     fi
 RUN install bin/* /usr/local/bin
 
-FROM ${GO_IMAGE} as strip_binary
+FROM ${GO_IMAGE} AS strip_binary
 #strip needs to run on TARGETPLATFORM, not BUILDPLATFORM
 COPY --from=etcd-builder /usr/local/bin/ /usr/local/bin
 RUN for bin in $(ls /usr/local/bin); do \
