@@ -12,3 +12,6 @@ scm:
     owner: "k3s-io"
     repository: "etcd"
     branch: "master"
+  buildbase:
+    owner: "rancher"
+    repository: "image-build-base"
