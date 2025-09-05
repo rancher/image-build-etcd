@@ -1,4 +1,4 @@
-ARG GO_IMAGE=rancher/hardened-build-base:v1.24.6b1
+ARG GO_IMAGE=rancher/hardened-build-base:v1.23.11b1
 
 # Image that provides cross compilation tooling.
 FROM --platform=$BUILDPLATFORM rancher/mirrored-tonistiigi-xx:1.6.1 AS xx
@@ -20,7 +20,7 @@ FROM base-builder AS etcd-builder
 ARG TARGETARCH
 ARG PKG=go.etcd.io/etcd
 ARG SRC=github.com/k3s-io/etcd
-ARG TAG=v3.6.4-k3s2
+ARG TAG=v3.6.4-k3s3
 RUN git clone --depth=1 https://${SRC}.git $GOPATH/src/${PKG}
 WORKDIR $GOPATH/src/${PKG}
 RUN git fetch --all --tags --prune
