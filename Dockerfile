@@ -25,6 +25,9 @@ RUN git clone --depth=1 https://${SRC}.git $GOPATH/src/${PKG}
 WORKDIR $GOPATH/src/${PKG}
 RUN git fetch --all --tags --prune
 RUN git checkout tags/${TAG} -b ${TAG}
+RUN go mod edit -replace go.opentelemetry.io/otel=go.opentelemetry.io/otel@v1.41.0 && \
+    go mod edit -replace go.opentelemetry.io/otel/sdk=go.opentelemetry.io/otel/sdk@v1.43.0 && \
+    go mod tidy
 RUN go mod vendor
 RUN go mod download
 # cross-compilation setup
