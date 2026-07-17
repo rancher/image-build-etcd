@@ -22,13 +22,13 @@ jobs:
 
       - name: Generate GitHub App token
         id: generate-token
-        uses: actions/create-github-app-token@f8d387b68d61c58ab83c6c016672934102569859 # v3.0.0
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
           app-id: ${{ env.APP_ID }}
           private-key: ${{ env.PRIVATE_KEY }}
 
       - name: Sync Upstream Releases
-        uses: rancher/ecm-distro-tools/actions/sync-upstream-release@10ab39987d39be83da6a252c1c3b540e496e0287 # v0.66.0
+        uses: rancher/ecm-distro-tools/actions/sync-upstream-release@b558c3371d4a363f131e31a87d5c47dae2bbebe7 # v0.75.1
         with:
           upstream-owner: 'k3s-io'
           upstream-repo: 'etcd'
