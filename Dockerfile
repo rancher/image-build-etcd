@@ -32,14 +32,17 @@ RUN go mod download
 # cross-compilation setup
 ARG TARGETPLATFORM
 # build and assert statically linked executable(s)
+# For v3.6+ (multi-module) build the binaries from the root module by package path so the
+# go-mod-overrides grpc replace applies; building inside server/ and etcdctl/ would use their
+# own go.mod (grpc v1.79.3) and ship the vulnerable dependency.
 RUN xx-go --wrap && \
     export GO_LDFLAGS="-linkmode=external -X ${PKG}/version.GitSHA=$(git rev-parse --short HEAD)" && \
     if echo ${TAG} | grep -qE '^v3\.4\.'; then \
         go-build-static.sh -gcflags=-trimpath=${GOPATH}/src -o bin/etcd . && \
         go-build-static.sh -gcflags=-trimpath=${GOPATH}/src -o bin/etcdctl ./etcdctl; \
     else \
-        cd $GOPATH/src/${PKG}/server  && go-build-static.sh -gcflags=-trimpath=${GOPATH}/src -o ../bin/etcd . && \
-        cd $GOPATH/src/${PKG}/etcdctl && go-build-static.sh -gcflags=-trimpath=${GOPATH}/src -o ../bin/etcdctl .; \
+        go-build-static.sh -mod=mod -gcflags=-trimpath=${GOPATH}/src -o bin/etcd go.etcd.io/etcd/server/v3 && \
+        go-build-static.sh -mod=mod -gcflags=-trimpath=${GOPATH}/src -o bin/etcdctl go.etcd.io/etcd/etcdctl/v3; \
     fi
 
 RUN xx-verify --static bin/*
