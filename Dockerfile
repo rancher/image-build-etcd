@@ -26,24 +26,27 @@ WORKDIR $GOPATH/src/${PKG}
 RUN git fetch --all --tags --prune
 RUN git checkout tags/${TAG} -b ${TAG}
 COPY go-mod-overrides ./go-mod-overrides
-RUN go-mod-overrides.sh ./go-mod-overrides
-RUN go mod vendor
-RUN go mod download
+RUN --mount=type=cache,id=gomod,target=/go/pkg/mod \
+    --mount=type=cache,id=gobuild,target=/root/.cache/go-build \
+    go-mod-overrides.sh ./go-mod-overrides
 # cross-compilation setup
 ARG TARGETPLATFORM
 # build and assert statically linked executable(s)
-RUN xx-go --wrap && \
-    export GO_LDFLAGS="-linkmode=external -X ${PKG}/version.GitSHA=$(git rev-parse --short HEAD)" && \
+RUN --mount=type=cache,id=gomod,target=/go/pkg/mod \
+    --mount=type=cache,id=gobuild,target=/root/.cache/go-build \
+    xx-go --wrap && \
     if echo ${TAG} | grep -qE '^v3\.4\.'; then \
+        export GO_LDFLAGS="-linkmode=external -X ${PKG}/version.GitSHA=$(git rev-parse --short HEAD)" && \
         go-build-static.sh -gcflags=-trimpath=${GOPATH}/src -o bin/etcd . && \
         go-build-static.sh -gcflags=-trimpath=${GOPATH}/src -o bin/etcdctl ./etcdctl; \
     else \
-        cd $GOPATH/src/${PKG}/server  && go-build-static.sh -gcflags=-trimpath=${GOPATH}/src -o ../bin/etcd . && \
-        cd $GOPATH/src/${PKG}/etcdctl && go-build-static.sh -gcflags=-trimpath=${GOPATH}/src -o ../bin/etcdctl .; \
+        export GO_LDFLAGS="-linkmode=external -X ${PKG}/api/v3/version.GitSHA=$(git rev-parse --short HEAD)" && \
+        go-build-static.sh -gcflags=-trimpath=${GOPATH}/src -o bin/etcd go.etcd.io/etcd/server/v3 && \
+        go-build-static.sh -gcflags=-trimpath=${GOPATH}/src -o bin/etcdctl go.etcd.io/etcd/etcdctl/v3; \
     fi
 
-RUN xx-verify --static bin/*
-RUN go-assert-static.sh bin/*
+RUN xx-verify --static bin/* && \
+    go-assert-static.sh bin/*
 ARG ETCD_UNSUPPORTED_ARCH
 ENV ETCD_UNSUPPORTED_ARCH=$ETCD_UNSUPPORTED_ARCH
 RUN if [ "${TARGETARCH}" = "amd64" ]; then \
@@ -53,11 +56,12 @@ RUN install bin/* /usr/local/bin
 
 FROM ${GO_IMAGE} AS strip_binary
 #strip needs to run on TARGETPLATFORM, not BUILDPLATFORM
-COPY --from=etcd-builder /usr/local/bin/ /usr/local/bin
-RUN for bin in $(ls /usr/local/bin); do \
-        strip /usr/local/bin/${bin}; \
-    done
-RUN etcd --version
+COPY --from=etcd-builder /usr/local/bin/etcd* /usr/local/bin
+RUN for bin in /usr/local/bin/etcd*; do \
+        strip ${bin}; \
+    done && \
+    etcd --version && \
+    etcdctl version
 
 FROM scratch
 ARG ETCD_UNSUPPORTED_ARCH
