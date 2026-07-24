@@ -17,7 +17,7 @@ SRC ?= github.com/k3s-io/etcd
 TAG ?= ${GITHUB_ACTION_TAG}
 
 ifeq ($(TAG),)
-TAG := v3.6.12-k3s1$(BUILD_META)
+TAG := v3.6.14-k3s1$(BUILD_META)
 endif
 
 ifeq (,$(filter %$(BUILD_META),$(TAG)))
