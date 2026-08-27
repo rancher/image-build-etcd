@@ -1,44 +1,46 @@
 ---
-name: "Update upstream version"
+name: "Update etcd minor versions"
+
 sources:
-  tag:
-    name: Get upstream tag
-    kind: gittag
-    scmid: upstream
+  etcd:
+    name: "Get the three latest etcd minor tags"
+    kind: shell
     spec:
-      versionfilter:
-        kind: regex
-        pattern: "^v[0-9]+.[0-9]+.[0-9]+-k3s[0-9]+"
-  gomod:
-    name: Get golang version
-    kind: file
-    dependson:
-      - tag
-    spec:
-      file: 'https://raw.githubusercontent.com/{{ .scm.upstream.owner }}/{{ .scm.upstream.repository }}/{{ source "tag" }}/go.mod'
-      matchpattern: 'go ([0-9]+\.[0-9]+)'
-    transformers:
-      - trimprefix: "go "
+      shell: /bin/bash
+      command: |
+        set -euo pipefail
+        versions="$({
+          curl -fsSL \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'Authorization: Bearer {{ requiredEnv .github.token }}' \
+            'https://api.github.com/repos/k3s-io/etcd/tags?per_page=100' |
+            jq -r '.[].name' |
+            sort -rV | awk -F. '!minor[$2]++' |
+            head -n 2
+        })"
+
+        if [[ "$(printf '%s\n' "$versions" | wc -l)" -ne 2 ]]; then
+          echo "Expected two etcd minor versions, found: $versions" >&2
+          exit 1
+        fi
+
+        # Make sure the -k3s[0-9] suffix in the versions
+        if [[ "$(printf '%s\n' "$versions" ) | grep -vE '^-k3s[0-9]+$' | wc -l)" -ne 0 ]]; then
+          echo "Expected versions to have the -k3s[0-9] suffix, found: $versions" >&2
+          exit 1
+        fi
+
+        printf '%s\n' "$versions"
+
 targets:
-  dockerfile:
-    name: 'Bump Dockerfile to upstream version {{ source "tag" }}'
-    kind: dockerfile
-    scmid: default
-    sourceid: tag
-    spec:
-      file: "Dockerfile"
-      instruction:
-        keyword: "ARG"
-        matcher: "TAG"
-  makefile:
-    name: 'Bump Makefile to upstream version {{ source "tag" }}'
+  tagfile:
+    name: "Bump the two latest etcd minor versions in TAG"
     kind: file
+    sourceid: etcd
     scmid: default
-    disablesourceinput: true
     spec:
-      file: Makefile
-      matchpattern: '(?m)^TAG \:\= (.*)'
-      replacepattern: 'TAG := {{ source "tag" }}$$(BUILD_META)'
+      file: TAG
+
 scms:
   default:
     kind: github
@@ -47,24 +49,16 @@ scms:
       username: '{{ requiredEnv .github.username }}'
       user: '{{ .github.user }}'
       email: '{{ .github.email }}'
-      owner: '{{ .scm.default.owner }}'
-      repository: '{{ .scm.default.repository }}'
-      branch: '{{ .scm.default.branch }}'
-  upstream:
-    kind: github
-    spec:
-      token: '{{ requiredEnv .github.token }}'
-      owner: '{{ .scm.upstream.owner }}'
-      repository: '{{ .scm.upstream.repository }}'
-      branch: '{{ .scm.upstream.branch }}'
+      owner: '{{ .github.owner }}'
+      repository: '{{ .github.repository }}'
+      branch: '{{ .github.branch }}'
+
 actions:
   default:
-    title: 'Bump to upstream version {{ source "tag" }}'
+    title: 'Bump the two latest etcd minor versions'
     kind: github/pullrequest
     spec:
       automerge: false
       labels:
-        - chore
-        - skip-changelog
-        - status/auto-created
+        - updatecli
     scmid: default
