@@ -58,7 +58,8 @@ actions:
     title: 'Bump the two latest etcd minor versions'
     kind: github/pullrequest
     spec:
-      automerge: false
+      merge:
+        strategy: auto
       labels:
         - updatecli
     scmid: default
