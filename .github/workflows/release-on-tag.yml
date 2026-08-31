@@ -1,0 +1,108 @@
+# This workflow automatically creates a GitHub release when the default TAG file is updated on main.
+# 99% of the time, from an UpdateCLI PR that bumps the TAG while tracking upstream.
+name: Release On Tag Update
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - 'TAG'
+
+permissions:
+  contents: read
+
+jobs:
+  trigger-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - name: Check out code
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+
+      - name: Validate TAG-only change and collect release tags
+        id: validate
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          SHOULD_RELEASE=false
+          release_tags=""
+          base_sha="${{ github.event.before }}"
+
+          if [[ "$base_sha" == "0000000000000000000000000000000000000000000" ]]; then
+            echo "Push has no previous commit; skipping release"
+          elif [[ "$(git diff --name-only "$base_sha" "$GITHUB_SHA")" != "TAG" ]]; then
+            echo "Push changed files other than TAG; skipping release"
+          else
+            mapfile -t release_tags < <(git diff --unified=0 "$base_sha" "$GITHUB_SHA" -- TAG | awk '/^\+/ && !/^\+\+\+/ { print substr($0, 2) }')
+
+            if [[ "${#release_tags[@]}" -eq 0 ]]; then
+              echo "TAG changed without adding or updating a release version; skipping release"
+            else
+              for release_tag in "${release_tags[@]}"; do
+                if ! [[ "$release_tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-k3s[0-9]+$ ]]; then
+                  echo "Invalid TAG entry: $release_tag"
+                  exit 1
+                fi
+              done
+
+              release_tags="$(printf '%s\n' "${release_tags[@]}")"
+              SHOULD_RELEASE=true
+            fi
+          fi
+
+          echo "should_release=$SHOULD_RELEASE" >> "$GITHUB_OUTPUT"
+          {
+            echo "release_tags<<EOF"
+            printf '%s\n' "$release_tags"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Read app secrets
+        if: steps.validate.outputs.should_release == 'true'
+        uses: rancher-eio/read-vault-secrets@0da85151ad1f19ed7986c41587e45aac1ace74b6 # v3
+        with:
+          secrets: |
+            secret/data/github/repo/${{ github.repository }}/github/rancher-release-team-auto-tagger/app-credentials appId | APP_ID ;
+            secret/data/github/repo/${{ github.repository }}/github/rancher-release-team-auto-tagger/app-credentials privateKey | PRIVATE_KEY
+
+      - name: Generate GitHub App token
+        if: steps.validate.outputs.should_release == 'true'
+        id: generate-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ env.APP_ID }}
+          private-key: ${{ env.PRIVATE_KEY }}
+
+      - name: Create GitHub releases for changed TAG entries
+        if: steps.validate.outputs.should_release == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ steps.generate-token.outputs.token }}
+          RELEASE_TAGS: ${{ steps.validate.outputs.release_tags }}
+        run: |
+          set -euo pipefail
+
+          build_meta="$(make -s log | sed -n 's/^BUILD_META=//p')"
+          if [[ -z "$build_meta" ]]; then
+            echo "Unable to determine BUILD_META from the Makefile"
+            exit 1
+          fi
+
+          for base_tag in $RELEASE_TAGS; do
+            release_tag="${base_tag}${build_meta}"
+            if gh release view "$release_tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+              echo "Release $release_tag already exists; skipping"
+              continue
+            fi
+
+            gh release create "$release_tag" \
+              --repo "$GITHUB_REPOSITORY" \
+              --target "$GITHUB_SHA" \
+              --title "$release_tag" \
+              --generate-notes
+              done
