@@ -1,0 +1,125 @@
+# This workflow triggers on any Dockerfile changes that occur on main.
+# 99% of the time, from an UpdateCLI PR merging that bumps the base image.
+name: Release on Base Image Update
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - 'Dockerfile'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  trigger-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - name: Check out code
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+
+      - name: Validate base image change is included
+        id: validate
+        shell: bash
+        run: |
+          set -euo pipefail
+          SHOULD_RELEASE=true
+          base_sha="${{ github.event.before }}"
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" || -z "$base_sha" || "$base_sha" == "0000000000000000000000000000000000000000" ]]; then
+            base_sha="$(git rev-parse HEAD^)"
+          fi
+
+          dockerfile_diff="$(git diff --unified=0 "$base_sha" "$GITHUB_SHA" -- Dockerfile)"
+
+          changed_lines="$(grep -E '^[+-]' <<< "$dockerfile_diff" | grep -Ev '^(\+\+\+|---)' || true)"
+          changed_count="$(wc -l <<< "$changed_lines" | tr -d ' ')"
+
+          if [[ "$changed_count" -ne 2 ]]; then
+            echo "Expected only one Dockerfile line replacement (GO_IMAGE), found $changed_count changed lines"
+            echo "$changed_lines"
+            SHOULD_RELEASE=false
+          fi
+
+          removed_line="$(grep -E '^-' <<< "$changed_lines" | head -n1 || true)"
+          added_line="$(grep -E '^\+' <<< "$changed_lines" | head -n1 || true)"
+
+          if ! [[ "$removed_line" =~ ^-ARG\ GO_IMAGE=rancher/hardened-build-base:v[0-9]+\.[0-9]+\.[0-9]+b[0-9]+$ ]]; then
+            echo "Removed Dockerfile line is not the expected GO_IMAGE format"
+            echo "$removed_line"
+            SHOULD_RELEASE=false
+          fi
+
+          if ! [[ "$added_line" =~ ^\+ARG\ GO_IMAGE=rancher/hardened-build-base:v[0-9]+\.[0-9]+\.[0-9]+b[0-9]+$ ]]; then
+            echo "Added Dockerfile line is not the expected GO_IMAGE format"
+            echo "$added_line"
+            SHOULD_RELEASE=false
+          fi
+
+          old_go_image="${removed_line#-ARG GO_IMAGE=}"
+          new_go_image="${added_line#+ARG GO_IMAGE=}"
+
+          if [[ "$old_go_image" == "$new_go_image" ]]; then
+            echo "GO_IMAGE line was not actually changed"
+            SHOULD_RELEASE=false
+          fi
+          if [[ "$SHOULD_RELEASE" == true ]]; then
+            echo "Validation passed: GO_IMAGE changed from $old_go_image to $new_go_image."
+          fi
+          echo "should_release=$SHOULD_RELEASE" >> "$GITHUB_OUTPUT"
+
+      - name: "Read Secrets"
+        uses: rancher-eio/read-vault-secrets@0da85151ad1f19ed7986c41587e45aac1ace74b6 # v3
+        if: steps.validate.outputs.should_release == 'true'
+        with:
+          secrets: |
+            secret/data/github/repo/${{ github.repository }}/github/rancher-release-team-auto-tagger/app-credentials appId | APP_ID ;
+            secret/data/github/repo/${{ github.repository }}/github/rancher-release-team-auto-tagger/app-credentials privateKey | PRIVATE_KEY
+
+      - name: Generate GitHub App token
+        id: generate-token
+        if: steps.validate.outputs.should_release == 'true'
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ env.APP_ID }}
+          private-key: ${{ env.PRIVATE_KEY }}
+
+      - name: Create releases for configured etcd versions
+        if: steps.validate.outputs.should_release == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ steps.generate-token.outputs.token }}
+        run: |
+          set -euo pipefail
+
+          build_meta="$(make -s log | sed -n 's/^BUILD_META=//p')"
+          if [[ -z "$build_meta" ]]; then
+            echo "Unable to determine BUILD_META from the Makefile"
+            exit 1
+          fi
+
+          while IFS= read -r base_tag || [[ -n "$base_tag" ]]; do
+            [[ -z "$base_tag" ]] && continue
+
+            if ! [[ "$base_tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-k3s[0-9]+$ ]]; then
+              echo "Invalid TAG entry: $base_tag"
+              exit 1
+            fi
+
+            release_tag="${base_tag}${build_meta}"
+            if gh release view "$release_tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+              echo "Release $release_tag already exists; skipping"
+              continue
+            fi
+
+            gh release create "$release_tag" \
+              --repo "$GITHUB_REPOSITORY" \
+              --target "$GITHUB_SHA" \
+              --title "$release_tag" \
+              --generate-notes
+          done < TAG
