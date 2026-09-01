@@ -75,9 +75,9 @@ scms:
       username: '{{ requiredEnv .github.username }}'
       user: '{{ .github.user }}'
       email: '{{ .github.email }}'
-      owner: '{{ .scm.default.owner }}'
-      repository: '{{ .scm.default.repository }}'
-      branch: '{{ .scm.default.branch }}'
+      owner: '{{ .github.owner }}'
+      repository: '{{ .github.repository }}'
+      branch: '{{ .github.branch }}'
 
 actions:
   default:
