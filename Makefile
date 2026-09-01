@@ -1,4 +1,7 @@
 SEVERITIES = HIGH,CRITICAL
+VEX_REPORT = .rancher.openvex.json
+VEX_REPORT_COMMIT = $(VEX_REPORT).commit
+VEX_REPORT_PATH = reports/rancher.openvex.json
 
 UNAME_M = $(shell uname -m)
 ifndef TARGET_PLATFORMS
@@ -54,7 +57,16 @@ push-prime-image:
 
 .PHONY: image-scan
 image-scan:
-	trivy image --severity $(SEVERITIES) --no-progress --ignore-unfixed $(IMAGE)
+	@set -eu; \
+	new_commit="$$(gh api "repos/rancher/vexhub/commits?path=$(VEX_REPORT_PATH)&per_page=1" --jq '.[0].sha')"; \
+	stored_commit="$$(cat "$(VEX_REPORT_COMMIT)" 2>/dev/null || true)"; \
+	if [ "$$new_commit" != "$$stored_commit" ] || [ ! -f "$(VEX_REPORT)" ] || \
+		grep -q '^version https://git-lfs.github.com/spec/v1$$' "$(VEX_REPORT)"; then \
+		download_url="$$(gh api "repos/rancher/vexhub/contents/$(VEX_REPORT_PATH)?ref=main" --jq '.download_url')"; \
+		gh api "$$download_url" > "$(VEX_REPORT)"; \
+		printf '%s\n' "$$new_commit" > "$(VEX_REPORT_COMMIT)"; \
+	fi
+	trivy image --severity $(SEVERITIES) --no-progress --ignore-unfixed --vex "$(VEX_REPORT)" $(IMAGE)
 
 PHONY: log
 log:
