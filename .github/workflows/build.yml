@@ -30,18 +30,24 @@ jobs:
         build-args: |
           TAG=${{ env.TAG }}
 
-    - name: Calculate daily VEX cache key
-      id: vex-key
+    - name: Download VEX metadata
       shell: bash
       run: |
-        echo "key=rancher-vex-v1-$(date -u +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
+        set -euo pipefail
+
+        curl \
+          --fail \
+          --retry 3 \
+          --retry-all-errors \
+          --output "$GITHUB_WORKSPACE/.rancher.openvex.json.meta" \
+          https://raw.githubusercontent.com/rancher/vexhub/refs/heads/main/reports/rancher.openvex.json
 
     - name: Restore Rancher VEX report
       id: vex-cache
       uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: ${{ runner.temp }}/rancher.openvex.json
-        key: ${{ steps.vex-key.outputs.key }}
+        key: rancher-vex-v1-${{ hashFiles('.rancher.openvex.json.meta') }}
 
     - name: Enable VEX report when available
       shell: bash
@@ -53,7 +59,7 @@ jobs:
           echo "TRIVY_VEX=$vex_file" >> "$GITHUB_ENV"
           echo "TRIVY_SHOW_SUPPRESSED=true" >> "$GITHUB_ENV"
         else
-          echo "::warning::Today's Rancher VEX cache is unavailable; scanning without VEX"
+          echo "::warning::Rancher VEX cache is unavailable; scanning without VEX"
         fi
 
     - name: Run Trivy vulnerability scanner
