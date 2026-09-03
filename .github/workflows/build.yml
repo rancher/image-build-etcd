@@ -30,15 +30,30 @@ jobs:
         build-args: |
           TAG=${{ env.TAG }}
 
-    - name: Download Rancher's VEX Hub report
+    - name: Calculate daily VEX cache key
+      id: vex-key
+      shell: bash
       run: |
-        curl -sfLOS --retry 3 https://github.com/rancher/vexhub/raw/refs/heads/main/reports/rancher.openvex.json || true
-        if (jq . rancher.openvex.json &> /dev/null); then
-            echo "Rancher's VEX report downloaded successfully"
+        echo "key=rancher-vex-v1-$(date -u +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
+
+    - name: Restore Rancher VEX report
+      id: vex-cache
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ${{ runner.temp }}/rancher.openvex.json
+        key: ${{ steps.vex-key.outputs.key }}
+
+    - name: Enable VEX report when available
+      shell: bash
+      run: |
+        vex_file="$RUNNER_TEMP/rancher.openvex.json"
+
+        if [[ -s "$vex_file" ]]; then
+          echo "Using cached Rancher VEX report"
+          echo "TRIVY_VEX=$vex_file" >> "$GITHUB_ENV"
+          echo "TRIVY_SHOW_SUPPRESSED=true" >> "$GITHUB_ENV"
         else
-            echo "Failed to download Rancher's VEX report"
-            cat rancher.openvex.json
-            exit 1
+          echo "::warning::Today's Rancher VEX cache is unavailable; scanning without VEX"
         fi
 
     - name: Run Trivy vulnerability scanner
@@ -50,9 +65,6 @@ jobs:
         severity: 'CRITICAL,HIGH'
         format: 'sarif'
         output: 'trivy-results.sarif'
-      env:
-        TRIVY_VEX: rancher.openvex.json
-        TRIVY_DISABLE_VEX_NOTICE: true
 
     - name: Upload Trivy scan results to GitHub Security tab
       uses: github/codeql-action/upload-sarif@7188fc363630916deb702c7fdcf4e481b751f97a # v4.37.1
