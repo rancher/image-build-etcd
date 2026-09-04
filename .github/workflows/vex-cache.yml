@@ -13,18 +13,25 @@ jobs:
   cache-vex:
     runs-on: ubuntu-latest
     steps:
-      - name: Calculate daily cache key
-        id: vex-key
+      - name: Download VEX report metadata
         shell: bash
         run: |
-          echo "key=rancher-vex-v1-$(date -u +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
+          set -euo pipefail
 
-      - name: Check today's VEX cache
+          curl \
+            --fail \
+            --retry 3 \
+            --retry-all-errors \
+            --output "$GITHUB_WORKSPACE/.rancher.openvex.json.meta" \
+            https://raw.githubusercontent.com/rancher/vexhub/refs/heads/main/reports/rancher.openvex.json
+
+      - name: Check VEX cache
         id: vex-cache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ${{ runner.temp }}/rancher.openvex.json
-          key: ${{ steps.vex-key.outputs.key }}
+          # This is a hash-of-a-hash, as the metadatafile itself holds the SHA256, but it works and we don't spend time extracting the SHA256.
+          key: rancher-vex-v1-${{ hashFiles('.rancher.openvex.json.meta') }}
           lookup-only: true
 
       - name: Download Rancher VEX report
@@ -39,16 +46,16 @@ jobs:
             --retry 3 \
             --retry-all-errors \
             --output "$RUNNER_TEMP/rancher.openvex.json" \
-            https://raw.githubusercontent.com/rancher/vexhub/refs/heads/main/reports/rancher.openvex.json
+            https://github.com/rancher/vexhub/raw/refs/heads/main/reports/rancher.openvex.json
 
           jq --exit-status \
             'has("@context") and (.statements | type == "array")' \
             "$RUNNER_TEMP/rancher.openvex.json" \
             > /dev/null
 
-      - name: Save today's VEX cache
+      - name: Save VEX cache
         if: steps.vex-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ${{ runner.temp }}/rancher.openvex.json
-          key: ${{ steps.vex-key.outputs.key }}
+          key: rancher-vex-v1-${{ hashFiles('.rancher.openvex.json.meta') }}

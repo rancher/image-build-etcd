@@ -1,7 +1,8 @@
 SEVERITIES = HIGH,CRITICAL
 VEX_REPORT = .rancher.openvex.json
-VEX_REPORT_COMMIT = $(VEX_REPORT).commit
-VEX_REPORT_PATH = reports/rancher.openvex.json
+VEX_REPORT_META = .rancher.openvex.json.meta
+VEX_REPORT_META_URL = https://raw.githubusercontent.com/rancher/vexhub/refs/heads/main/reports/rancher.openvex.json
+VEX_REPORT_URL = https://github.com/rancher/vexhub/raw/refs/heads/main/reports/rancher.openvex.json
 
 UNAME_M = $(shell uname -m)
 ifndef TARGET_PLATFORMS
@@ -58,13 +59,11 @@ push-prime-image:
 .PHONY: image-scan
 image-scan:
 	@set -eu; \
-	new_commit="$$(gh api "repos/rancher/vexhub/commits?path=$(VEX_REPORT_PATH)&per_page=1" --jq '.[0].sha')"; \
-	stored_commit="$$(cat "$(VEX_REPORT_COMMIT)" 2>/dev/null || true)"; \
-	if [ "$$new_commit" != "$$stored_commit" ] || [ ! -f "$(VEX_REPORT)" ] || \
-		grep -q '^version https://git-lfs.github.com/spec/v1$$' "$(VEX_REPORT)"; then \
-		download_url="$$(gh api "repos/rancher/vexhub/contents/$(VEX_REPORT_PATH)?ref=main" --jq '.download_url')"; \
-		gh api "$$download_url" > "$(VEX_REPORT)"; \
-		printf '%s\n' "$$new_commit" > "$(VEX_REPORT_COMMIT)"; \
+	remote_sha="$$(curl --fail --silent --show-error --location "$(VEX_REPORT_META_URL)" | sha256sum | awk '{print $$1}')"; \
+	local_sha="$$(sha256sum "$(VEX_REPORT_META)" 2>/dev/null | awk '{print $$1}' || true)"; \
+	if [ "$$remote_sha" != "$$local_sha" ]; then \
+		curl --fail --silent --show-error --location "$(VEX_REPORT_URL)" > "$(VEX_REPORT)"; \
+		curl --fail --silent --show-error --location "$(VEX_REPORT_META_URL)" > "$(VEX_REPORT_META)"; \
 	fi
 	trivy image --severity $(SEVERITIES) --no-progress --ignore-unfixed --vex "$(VEX_REPORT)" $(IMAGE)
 
