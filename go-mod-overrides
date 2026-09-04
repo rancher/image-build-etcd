@@ -7,3 +7,7 @@
 # CVE-2026-56855/78662 (ssh channel DoS) — golang.org/x/crypto/ssh.
 # Drop once upstream requires golang.org/x/crypto >= v0.56.0.
 -replace golang.org/x/crypto=golang.org/x/crypto@v0.56.0
+
+# golang.org/x/net: CVE-2026-46600 (x/net/dns/dnsmessage panic parsing invalid SVCB or HTTPS RR).
+# Drop once upstream requires golang.org/x/net >= v0.56.0.
+-replace golang.org/x/net=golang.org/x/net@v0.56.0
