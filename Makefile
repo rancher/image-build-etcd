@@ -1,8 +1,7 @@
 SEVERITIES = HIGH,CRITICAL
-VEX_REPORT = .rancher.openvex.json
-VEX_REPORT_META = .rancher.openvex.json.meta
-VEX_REPORT_META_URL = https://raw.githubusercontent.com/rancher/vexhub/refs/heads/main/reports/rancher.openvex.json
-VEX_REPORT_URL = https://github.com/rancher/vexhub/raw/refs/heads/main/reports/rancher.openvex.json
+VEX_REPORT = rancher.openvex.json
+VEX_REPORT_GZ = rancher.openvex.json.gz
+VEX_REPORT_URL = https://github.com/rancher/vexhub/raw/refs/heads/main/reports/rancher.openvex.json.gz
 
 UNAME_M = $(shell uname -m)
 ifndef TARGET_PLATFORMS
@@ -59,13 +58,14 @@ push-prime-image:
 .PHONY: image-scan
 image-scan:
 	@set -eu; \
-	remote_sha="$$(curl --fail --silent --show-error --location "$(VEX_REPORT_META_URL)" | sha256sum | awk '{print $$1}')"; \
-	local_sha="$$(sha256sum "$(VEX_REPORT_META)" 2>/dev/null | awk '{print $$1}' || true)"; \
-	if [ "$$remote_sha" != "$$local_sha" ]; then \
-		curl --fail --silent --show-error --location "$(VEX_REPORT_URL)" > "$(VEX_REPORT)"; \
-		curl --fail --silent --show-error --location "$(VEX_REPORT_META_URL)" > "$(VEX_REPORT_META)"; \
-	fi
-	trivy image --severity $(SEVERITIES) --no-progress --ignore-unfixed --vex "$(VEX_REPORT)" $(IMAGE)
+	if [ -z "$${TRIVY_VEX+x}" ]; then \
+		curl -fsSOL "$(VEX_REPORT_URL)"; \
+		if [ -s "$(VEX_REPORT_GZ)" ]; then \
+			gzip -d "$(VEX_REPORT_GZ)"; \
+			export TRIVY_VEX="$(VEX_REPORT)"; \
+		fi; \
+	fi; \
+	trivy image --severity $(SEVERITIES) --no-progress --ignore-unfixed $(IMAGE)
 
 PHONY: log
 log:
