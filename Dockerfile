@@ -1,4 +1,4 @@
-ARG GO_IMAGE=rancher/hardened-build-base:v1.26.9b1
+ARG GO_IMAGE=rancher/hardened-build-base:v1.26.9b2
 
 # Image that provides cross compilation tooling.
 FROM --platform=$BUILDPLATFORM rancher/mirrored-tonistiigi-xx:1.6.1 AS xx
@@ -28,7 +28,7 @@ RUN git checkout tags/${TAG} -b ${TAG}
 COPY go-mod-overrides ./go-mod-overrides
 RUN --mount=type=cache,id=gomod,target=/go/pkg/mod \
     --mount=type=cache,id=gobuild,target=/root/.cache/go-build \
-    go-mod-overrides.sh ./go-mod-overrides
+    go-mod-replacer -local ./go-mod-overrides
 # cross-compilation setup
 ARG TARGETPLATFORM
 # build and assert statically linked executable(s)
