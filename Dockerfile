@@ -28,7 +28,7 @@ RUN git checkout tags/${TAG} -b ${TAG}
 COPY go-mod-overrides ./go-mod-overrides
 RUN --mount=type=cache,id=gomod,target=/go/pkg/mod \
     --mount=type=cache,id=gobuild,target=/root/.cache/go-build \
-    go-mod-overrides.sh ./go-mod-overrides
+    go-mod-replacer -local ./go-mod-overrides
 # cross-compilation setup
 ARG TARGETPLATFORM
 # build and assert statically linked executable(s)
