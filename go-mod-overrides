@@ -1,3 +1,6 @@
 # google.golang.org/grpc: CVE-2026-84304, CVE-2026-84445 (HIGH), CVE-2026-84303 (MEDIUM); bump to v1.83.2.
 # Drop once upstream requires google.golang.org/grpc >= v1.83.2.
 -replace google.golang.org/grpc=google.golang.org/grpc@v1.83.2
+# golang.org/x/net: CVE-2026-78669 (HIGH); CVE-2026-78663, CVE-2026-97032 (MEDIUM); bump to v0.60.0.
+# Drop once upstream requires golang.org/x/net >= v0.60.0.
+-replace golang.org/x/net=golang.org/x/net@v0.60.0
