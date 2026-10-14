@@ -1,3 +1,5 @@
-# google.golang.org/grpc: CVE-2026-84304, CVE-2026-84445 (HIGH), CVE-2026-84303 (MEDIUM); bump to v1.83.2.
-# Drop once upstream requires google.golang.org/grpc >= v1.83.2.
--replace google.golang.org/grpc=google.golang.org/grpc@v1.83.2
+# Local go.mod overrides for this image, applied at build time by go-mod-replacer
+# (see Dockerfile). Example: -replace example.com/module=example.com/module@v1.2.3
+#
+# Prefer the global policy: add broadly-applicable CVE bumps to global_overrides.json
+# in rancher/image-build-base. Keep an entry here only if it's specific to this repo.
