@@ -3,3 +3,8 @@
 #
 # Prefer the global policy: add broadly-applicable CVE bumps to global_overrides.json
 # in rancher/image-build-base. Keep an entry here only if it's specific to this repo.
+
+# etcd v3.5 still uses otelgrpc.{Unary,Stream}ServerInterceptor, removed in otelgrpc v0.61.0.
+# The global grpc bump drags otelgrpc to v0.6x via genproto/cloud.google.com deps; pin the
+# last release that still has the interceptors.
+-replace go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc=go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc@v0.60.0

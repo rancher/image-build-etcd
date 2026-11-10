@@ -29,6 +29,10 @@ COPY go-mod-overrides ./go-mod-overrides
 RUN --mount=type=cache,id=gomod,target=/go/pkg/mod \
     --mount=type=cache,id=gobuild,target=/root/.cache/go-build \
     go-mod-replacer -local ./go-mod-overrides
+# etcd v3.5 root go.sum lacks urfave/cli, needed to build etcdctl from the root module
+RUN --mount=type=cache,id=gomod,target=/go/pkg/mod \
+    --mount=type=cache,id=gobuild,target=/root/.cache/go-build \
+    go get github.com/urfave/cli@v1.22.4
 # cross-compilation setup
 ARG TARGETPLATFORM
 # build and assert statically linked executable(s)
