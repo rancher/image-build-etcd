@@ -3,3 +3,8 @@
 #
 # Prefer the global policy: add broadly-applicable CVE bumps to global_overrides.json
 # in rancher/image-build-base. Keep an entry here only if it's specific to this repo.
+
+# CVE-2026-63209: etcd v3.6 pulls in github.com/klauspost/compress v1.18.0 through
+# prometheus/client_golang (promhttp). Bump to v1.18.7, the first release with the fix.
+# etcd v3.7 binaries do not include this module, so it does not affect the v3.7 build.
+-replace github.com/klauspost/compress=github.com/klauspost/compress@v1.18.7
